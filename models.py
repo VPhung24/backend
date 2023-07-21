@@ -17,7 +17,7 @@ class Reservation(BaseModel):
 
 
 class Review(BaseModel):
-    user_id: str
+    wallet_address: str
     restaurant_id: str
     rating: float
     text: str
