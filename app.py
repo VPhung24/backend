@@ -2,7 +2,6 @@ import csv
 from fastapi import FastAPI
 
 from models import Restaurant
-from geopy.geocoders import Nominatim
 
 app = FastAPI()
 
