@@ -12,4 +12,4 @@ class Restaurant(BaseModel):
     rating: float
     cuisine: str
     address: str
-    # geolocation: Geolocation
+    geolocation: Geolocation
