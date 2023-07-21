@@ -1,17 +1,32 @@
 import csv
 from fastapi import FastAPI
 
-from models import Restaurant
+from models import Restaurant, Review
+from firedantic import configure
+from google.cloud.firestore import Client
+
+client = Client()
+
+configure(client, prefix="snacks-")
 
 app = FastAPI()
 
-restaurants = []
-with open("restaurant_data.csv", "r") as f:
-    reader = csv.reader(f.readlines())
-    for line in reader:
-        name, url, rating, cuisine, address, latitude, longitude = line
-        restaurants.append(Restaurant(name=name, url=url, rating=float(rating), cuisine=cuisine, address=address, geolocation={"latitude": latitude, "longitude": longitude}))
 
 @app.get("/restaurants")
 async def get_restaurants() -> list[Restaurant]:
-    return restaurants
+    return Restaurant.find()
+
+
+@app.post("/post_review")
+async def post_review(
+    user_id: str, restaurant_id: str, rating: float, text: str
+) -> None:
+    review = Review(
+        user_id=user_id, restaurant_id=restaurant_id, rating=rating, text=text
+    )
+    Restaurant.find_one({"_id": restaurant_id}).reviews.append(review)
+
+
+@app.get("/reviews")
+async def get_reviews(restaurant_id: str) -> list[Review]:
+    Restaurant.find_one({"_id": restaurant_id}).reviews
