@@ -7,6 +7,10 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
+sympy = "^1.12"
+ecdsa = "^0.18.0"
+web3 = "^6.6.1"
+python-dotenv = "^1.0.0"
 
 
 [build-system]
