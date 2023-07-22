@@ -2,6 +2,7 @@ from typing import Optional
 from pydantic import BaseModel
 from firedantic import Model
 
+RestaurantID = str
 
 class Geolocation(BaseModel):
     latitude: float
@@ -38,5 +39,5 @@ class User(Model):
     __collection__ = "users"
     wallet_address: str
     world_id: Optional[str] = None
-    visited_restaurants: list[Restaurant] = []
+    visited_restaurants: list[RestaurantID] = []
     reviews: list[Review] = []
