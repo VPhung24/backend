@@ -57,29 +57,34 @@ async def get_reviews(wallet_address: str) -> list[Review]:
     return User.find_one({"wallet_address": wallet_address}).reviews
 
 
-@app.post("/users/new")
-async def create_user(wallet_address: str) -> str:
-    user = User(wallet_address=wallet_address)
-    # When a new user is created, we need to mint them a Tummy NFT
-    user.tummy_token_id = tummy_contract_instance.functions.totalSupply().call() - 1
-    user.profile_picture_url = f"https://ipfs.io/ipfs/bafybeifv3aptenmwi5zup2dkir7yk5aq4lqf7y32rdowitziozj4gwb5iy/604.png"
-    user.save()
-    nonce = w3.eth.get_transaction_count('0xc4e1bf51752b4D55ef81FcA2334404245A07680c')
-    tx = tummy_contract_instance.functions.mintNFT(wallet_address, "bafybeicqdzbmnutxmwa6g4vgbcu7sdarzooqfrfs73ahkrnlxxg5bpgqse/604").buildTransaction(
-        {
-            "chainId": 5,
-            "gas": 1000000,
-            "gasPrice": w3.toWei("10", "gwei"),
-            "nonce": nonce,
-        }
-    )
-    signed_tx = w3.eth.account.sign_transaction(tx, private_key=private_key)
-    tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
-    return tx_hash
-
 @app.get("/users/{wallet_address}")
 async def get_user(wallet_address: str) -> User:
-    return User.find_one({"wallet_address": wallet_address})
+    try:
+        return User.find_one({"wallet_address": wallet_address})
+    except ModuleNotFoundError:
+        # We need to create a new user
+        user = User(wallet_address=wallet_address)
+        # When a new user is created, we need to mint them a Tummy NFT
+        user.tummy_token_id = tummy_contract_instance.functions.totalSupply().call() - 1
+        user.profile_picture_url = f"https://ipfs.io/ipfs/bafybeifv3aptenmwi5zup2dkir7yk5aq4lqf7y32rdowitziozj4gwb5iy/604.png"
+        user.save()
+        nonce = w3.eth.get_transaction_count(
+            "0xc4e1bf51752b4D55ef81FcA2334404245A07680c"
+        )
+        tx = tummy_contract_instance.functions.mintNFT(
+            wallet_address,
+            "bafybeicqdzbmnutxmwa6g4vgbcu7sdarzooqfrfs73ahkrnlxxg5bpgqse/604",
+        ).buildTransaction(
+            {
+                "chainId": 5,
+                "gas": 1000000,
+                "gasPrice": w3.toWei("10", "gwei"),
+                "nonce": nonce,
+            }
+        )
+        signed_tx = w3.eth.account.sign_transaction(tx, private_key=private_key)
+        _ = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
+        return user
 
 
 @app.post("restaurants/{restaurant_id}/checkin")
