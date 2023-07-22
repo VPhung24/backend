@@ -41,3 +41,5 @@ class User(Model):
     world_id: Optional[str] = None
     visited_restaurants: list[RestaurantID] = []
     reviews: list[Review] = []
+    tummy_token_id: Optional[int] = -1
+    profile_picture_url: Optional[str] = None

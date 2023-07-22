@@ -59,14 +59,17 @@ async def get_reviews(wallet_address: str) -> list[Review]:
 
 @app.post("/users/new")
 async def create_user(wallet_address: str) -> str:
-    User(wallet_address=wallet_address).save()
+    user = User(wallet_address=wallet_address)
     # When a new user is created, we need to mint them a Tummy NFT
+    user.tummy_token_id = tummy_contract_instance.functions.totalSupply().call() - 1
+    user.profile_picture_url = f"https://ipfs.io/ipfs/bafybeifv3aptenmwi5zup2dkir7yk5aq4lqf7y32rdowitziozj4gwb5iy/604.png"
+    user.save()
     nonce = w3.eth.get_transaction_count('0xc4e1bf51752b4D55ef81FcA2334404245A07680c')
-    tx = tummy_contract_instance.functions.mintNFT(wallet_address, "test").buildTransaction(
+    tx = tummy_contract_instance.functions.mintNFT(wallet_address, "bafybeicqdzbmnutxmwa6g4vgbcu7sdarzooqfrfs73ahkrnlxxg5bpgqse/604").buildTransaction(
         {
             "chainId": 5,
             "gas": 1000000,
-            "gasPrice": w3.toWei("5", "gwei"),
+            "gasPrice": w3.toWei("10", "gwei"),
             "nonce": nonce,
         }
     )
