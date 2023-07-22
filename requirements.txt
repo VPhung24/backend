@@ -7,6 +7,7 @@ bitarray==2.8.0
 cachetools==5.3.1
 certifi==2023.7.22
 charset-normalizer==3.2.0
+click==8.1.6
 cytoolz==0.12.2
 eth-abi==4.1.0
 eth-account==0.9.0
@@ -26,12 +27,15 @@ google-cloud-firestore==2.11.1
 googleapis-common-protos==1.59.1
 grpcio==1.56.2
 grpcio-status==1.56.2
+gunicorn==21.2.0
+h11==0.14.0
 hexbytes==0.3.1
 idna==3.4
 jsonschema==4.18.4
 jsonschema-specifications==2023.7.1
 lru-dict==1.2.0
 multidict==6.0.4
+packaging==23.1
 parsimonious==0.9.0
 proto-plus==1.22.3
 protobuf==4.23.4
@@ -53,6 +57,7 @@ starlette==0.27.0
 toolz==0.12.0
 typing_extensions==4.7.1
 urllib3==1.26.16
+uvicorn==0.23.1
 web3==6.6.1
 websockets==11.0.3
 yarl==1.9.2
