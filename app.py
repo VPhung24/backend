@@ -1,13 +1,13 @@
 from http.client import HTTPException
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import BackgroundTasks, FastAPI
 from web3 import Web3
 
 from models import Restaurant, Review, User
 from firedantic import configure
 from google.cloud.firestore import Client
 import os
-from abi import tummy_abi
+from abi import tummy_abi, erc6551_registry_abi, erc6551_account_abi
 
 load_dotenv()
 client = Client()
@@ -19,6 +19,12 @@ w3 = Web3(Web3.HTTPProvider(os.environ["RPC_HTTP_URL"]))
 private_key = os.environ["DEPLOYER_PRIVATE_KEY"]
 tummy_contract_instance = w3.eth.contract(
     address=os.environ["TUMMY_NFT_ADDRESS"], abi=tummy_abi
+)
+erc6551_registry_instance = w3.eth.contract(
+    address=os.environ["ERC6551_REGISTRY_ADDRESS"], abi=erc6551_registry_abi
+)
+erc6551_account_instance = w3.eth.contract(
+    address=os.environ["ERC6551_ACCOUNT_ADDRESS"], abi=erc6551_account_abi
 )
 
 
@@ -58,7 +64,7 @@ async def get_reviews(wallet_address: str) -> list[Review]:
 
 
 @app.get("/users/{wallet_address}")
-async def get_user(wallet_address: str) -> User:
+async def get_user(wallet_address: str, background_tasks: BackgroundTasks) -> User:
     try:
         return User.find_one({"wallet_address": wallet_address})
     except ModuleNotFoundError:
@@ -68,23 +74,53 @@ async def get_user(wallet_address: str) -> User:
         user.tummy_token_id = tummy_contract_instance.functions.totalSupply().call() - 1
         user.profile_picture_url = f"https://ipfs.io/ipfs/bafybeifv3aptenmwi5zup2dkir7yk5aq4lqf7y32rdowitziozj4gwb5iy/604.png"
         user.save()
-        nonce = w3.eth.get_transaction_count(
-            "0xc4e1bf51752b4D55ef81FcA2334404245A07680c"
+        background_tasks.add_task(
+            mint_and_create_6551,
+            user,
+            "bafybeifv3aptenmwi5zup2dkir7yk5aq4lqf7y32rdowitziozj4gwb5iy/604",
         )
-        tx = tummy_contract_instance.functions.mintNFT(
-            wallet_address,
-            "bafybeicqdzbmnutxmwa6g4vgbcu7sdarzooqfrfs73ahkrnlxxg5bpgqse/604",
-        ).buildTransaction(
-            {
-                "chainId": 5,
-                "gas": 1000000,
-                "gasPrice": w3.toWei("10", "gwei"),
-                "nonce": nonce,
-            }
-        )
-        signed_tx = w3.eth.account.sign_transaction(tx, private_key=private_key)
-        _ = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
         return user
+
+
+def mint_and_create_6551(user: User, metadata_uri: str) -> None:
+    # When a new user is created, we need to mint them a Tummy NFT and then create an ERC-6551 for the NFT
+    nonce = w3.eth.get_transaction_count(os.environ["DEPLOYER_ADDRESS"])
+    tx = tummy_contract_instance.functions.mintNFT(
+        user.wallet_address,
+        metadata_uri,
+    ).buildTransaction(
+        {
+            "chainId": 5,
+            "gas": 1000000,
+            "gasPrice": w3.toWei("10", "gwei"),
+            "nonce": nonce,
+        }
+    )
+    signed_tx = w3.eth.account.sign_transaction(tx, private_key=private_key)
+    tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
+    _ = w3.eth.wait_for_transaction_receipt(tx_hash)
+    print("Tummy NFT minted")
+    # Now we need to create an ERC-6551 for the NFT
+    nonce = w3.eth.get_transaction_count(os.environ["DEPLOYER_ADDRESS"])
+    tx = erc6551_registry_instance.functions.createAccount(
+        erc6551_account_instance.address,
+        5,
+        tummy_contract_instance.address,
+        user.tummy_token_id,
+        1,
+        "0x",
+    ).buildTransaction(
+        {
+            "chainId": 5,
+            "gas": 1000000,
+            "gasPrice": w3.toWei("10", "gwei"),
+            "nonce": nonce,
+        }
+    )
+    signed_tx = w3.eth.account.sign_transaction(tx, private_key=private_key)
+    tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
+    _ = w3.eth.wait_for_transaction_receipt(tx_hash)
+    print("ERC-6551 created")
 
 
 @app.post("restaurants/{restaurant_id}/checkin")
