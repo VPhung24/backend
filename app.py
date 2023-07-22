@@ -57,9 +57,20 @@ async def create_user(wallet_address: str) -> None:
 async def get_user(wallet_address: str) -> User:
     return User.find_one({"wallet_address": wallet_address})
 
+
 @app.post("restaurants/{restaurant_id}/checkin")
 async def checkin(restaurant_id: str, wallet_address: str) -> None:
     user = User.find_one({"wallet_address": wallet_address})
     user.visited_restaurants.append(restaurant_id)
     user.save()
     # TODO emit a POAP
+
+
+@app.get("/.well-known/apple-app-site-association")
+def apple_app_site_association():
+    return {
+        "applinks": {
+            "details": [{"appIDs": ["xyz.parisbeepboop.LeSnacks"], "components": []}]
+        },
+        "webcredentials": {"apps": ["xyz.parisbeepboop.LeSnacks"]},
+    }
