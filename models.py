@@ -43,3 +43,4 @@ class User(Model):
     reviews: list[Review] = []
     tummy_token_id: Optional[int] = -1
     profile_picture_url: Optional[str] = None
+    tummy_6551_account: Optional[str] = None

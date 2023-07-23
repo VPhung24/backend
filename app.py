@@ -67,11 +67,11 @@ async def get_reviews(wallet_address: str) -> list[Review]:
 async def get_user(wallet_address: str, background_tasks: BackgroundTasks) -> User:
     try:
         return User.find_one({"wallet_address": wallet_address})
-    except ModuleNotFoundError:
+    except Exception:
         # We need to create a new user
         user = User(wallet_address=wallet_address)
         # When a new user is created, we need to mint them a Tummy NFT
-        user.tummy_token_id = tummy_contract_instance.functions.totalSupply().call() - 1
+        user.tummy_token_id = tummy_contract_instance.functions._tokenIds().call()
         user.profile_picture_url = f"https://ipfs.io/ipfs/bafybeifv3aptenmwi5zup2dkir7yk5aq4lqf7y32rdowitziozj4gwb5iy/604.png"
         user.save()
         background_tasks.add_task(
@@ -88,11 +88,12 @@ def mint_and_create_6551(user: User, metadata_uri: str) -> None:
     tx = tummy_contract_instance.functions.mintNFT(
         user.wallet_address,
         metadata_uri,
-    ).buildTransaction(
+    ).build_transaction(
         {
             "chainId": 5,
             "gas": 1000000,
-            "gasPrice": w3.toWei("10", "gwei"),
+            "maxFeePerGas": w3.to_wei("20", "gwei"),
+            "maxPriorityFeePerGas": w3.to_wei("10", "gwei"),
             "nonce": nonce,
         }
     )
@@ -109,11 +110,12 @@ def mint_and_create_6551(user: User, metadata_uri: str) -> None:
         user.tummy_token_id,
         1,
         "0x",
-    ).buildTransaction(
+    ).build_transaction(
         {
             "chainId": 5,
             "gas": 1000000,
-            "gasPrice": w3.toWei("10", "gwei"),
+            "maxFeePerGas": w3.to_wei("20", "gwei"),
+            "maxPriorityFeePerGas": w3.to_wei("10", "gwei"),
             "nonce": nonce,
         }
     )
@@ -121,6 +123,17 @@ def mint_and_create_6551(user: User, metadata_uri: str) -> None:
     tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
     _ = w3.eth.wait_for_transaction_receipt(tx_hash)
     print("ERC-6551 created")
+    # Get the address of the ERC-6551 account
+    user.tummy_6551_account = erc6551_registry_instance.functions.account(
+        erc6551_account_instance.address,
+        5,
+        tummy_contract_instance.address,
+        user.tummy_token_id,
+        1,
+    ).call()
+    user.save()
+    print("ERC-6551 account address saved")
+    
 
 
 @app.post("restaurants/{restaurant_id}/checkin")
