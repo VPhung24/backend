@@ -33,7 +33,7 @@ erc6551_account_instance = w3.eth.contract(
 
 
 BASE_TUMMIES_URIS = [
-    "Qmb6xm57jyCZk2VxmU3izsrQ6aW9KCtuangPmvcQwQrADD/00"
+    "Qmb6xm57jyCZk2VxmU3izsrQ6aW9KCtuangPmvcQwQrADD/00",
     "Qmb6xm57jyCZk2VxmU3izsrQ6aW9KCtuangPmvcQwQrADD/10"
 ]
 
