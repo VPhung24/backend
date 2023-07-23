@@ -62,12 +62,12 @@ async def post_review(
     user.save()
 
 
-@app.get("restaurants/{restaurant_id}/reviews")
+@app.get("/restaurants/{restaurant_id}/reviews")
 async def get_reviews(restaurant_id: str) -> list[Review]:
     return Restaurant.find_one({"_id": restaurant_id}).reviews
 
 
-@app.get("users/{wallet_address}/reviews")
+@app.get("/users/{wallet_address}/reviews")
 async def get_reviews(wallet_address: str) -> list[Review]:
     # Ensure address is checksummed
     wallet_address = w3.to_checksum_address(wallet_address)
@@ -187,7 +187,7 @@ def mint_proof_of_snack_and_transfer_to_6551(user: User, restaurant_id: str) -> 
         }
     )
 
-@app.post("restaurants/{restaurant_id}/checkin")
+@app.post("/restaurants/{restaurant_id}/checkin")
 async def checkin(restaurant_id: str, wallet_address: str, background_tasks: BackgroundTasks) -> None:
     user = User.find_one({"wallet_address": wallet_address})
     user.visited_restaurants.append(restaurant_id)
