@@ -55,7 +55,7 @@ async def post_review(
         rating=rating,
         text=text,
     )
-    restaurant = Restaurant.find_one({"_id": restaurant_id})
+    restaurant = Restaurant.get_by_doc_id(restaurant_id)
     restaurant.reviews.append(review)
     restaurant.save()
     user.reviews.append(review)
@@ -64,7 +64,7 @@ async def post_review(
 
 @app.get("/restaurants/{restaurant_id}/reviews")
 async def get_reviews(restaurant_id: str) -> list[Review]:
-    return Restaurant.find_one({"_id": restaurant_id}).reviews
+    return Restaurant.get_by_doc_id(restaurant_id).reviews
 
 
 @app.get("/users/{wallet_address}/reviews")
@@ -153,10 +153,11 @@ def mint_proof_of_snack_and_transfer_to_6551(user: User, restaurant_id: str) -> 
     # We mint a ProofOfSnack NFT and transfer it to the Tummy ERC-6551
     nonce = w3.eth.get_transaction_count(os.environ["DEPLOYER_ADDRESS"])
     # Get the POAP URI from the restaurant
-    restaurant = Restaurant.find_one({"_id": restaurant_id})
+    print(f"Fetching restaurant {restaurant_id}")
+    restaurant = Restaurant.get_by_doc_id(restaurant_id)
     metadata_uri = restaurant.poap_uri
     tx = proof_of_snack_contract_instance.functions.mintNFT(
-        user.wallet_address,
+        user.tummy_6551_account,
         metadata_uri,
     ).build_transaction(
         {
@@ -171,24 +172,11 @@ def mint_proof_of_snack_and_transfer_to_6551(user: User, restaurant_id: str) -> 
     tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
     _ = w3.eth.wait_for_transaction_receipt(tx_hash)
     print("ProofOfSnack NFT minted")
-    # Now we need to transfer the ProofOfSnack NFT to the Tummy ERC-6551
-    nonce = w3.eth.get_transaction_count(os.environ["DEPLOYER_ADDRESS"])
-    tx = proof_of_snack_contract_instance.functions.safeTransferFrom(
-        user.wallet_address,
-        user.tummy_6551_account,
-        user.tummy_token_id,
-    ).build_transaction(
-        {
-            "chainId": 5,
-            "gas": 1000000,
-            "maxFeePerGas": w3.to_wei("20", "gwei"),
-            "maxPriorityFeePerGas": w3.to_wei("10", "gwei"),
-            "nonce": nonce,
-        }
-    )
 
 @app.post("/restaurants/{restaurant_id}/checkin")
 async def checkin(restaurant_id: str, wallet_address: str, background_tasks: BackgroundTasks) -> None:
+    # Ensure address is checksummed
+    wallet_address = w3.to_checksum_address(wallet_address)
     user = User.find_one({"wallet_address": wallet_address})
     user.visited_restaurants.append(restaurant_id)
     user.save()
@@ -197,6 +185,7 @@ async def checkin(restaurant_id: str, wallet_address: str, background_tasks: Bac
         user,
         restaurant_id,
     )
+    return 200
 
 
 
