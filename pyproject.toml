@@ -14,6 +14,7 @@ firedantic = "^0.3.0"
 google-cloud-firestore = "^2.11.1"
 uvicorn = "^0.23.1"
 gunicorn = "^21.2.0"
+airstack = "^0.0.6"
 
 
 [build-system]

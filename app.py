@@ -231,6 +231,20 @@ async def checkin(
     return 200
 
 
+@app.get("/proof_of_snacks/{wallet_address}")
+async def get_proof_of_snacks(wallet_address: str) -> list[Restaurant]:
+    # Ensure address is checksummed
+    wallet_address = w3.to_checksum_address(wallet_address)
+    user = User.find_one({"wallet_address": wallet_address})
+    restaurants = user.visited_restaurants
+    # Filter only restaurants with POAPs
+    restaurants = [
+        Restaurant.get_by_doc_id(restaurant)
+        for restaurant in restaurants
+        if Restaurant.get_by_doc_id(restaurant).poap_uri != ""
+    ]
+    return restaurants
+
 @app.get("/.well-known/apple-app-site-association")
 def apple_app_site_association():
     return {
