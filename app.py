@@ -60,11 +60,15 @@ async def get_reviews(restaurant_id: str) -> list[Review]:
 
 @app.get("users/{wallet_address}/reviews")
 async def get_reviews(wallet_address: str) -> list[Review]:
+    # Ensure address is checksummed
+    wallet_address = w3.to_checksum_address(wallet_address)
     return User.find_one({"wallet_address": wallet_address}).reviews
 
 
 @app.get("/users/{wallet_address}")
 async def get_user(wallet_address: str, background_tasks: BackgroundTasks) -> User:
+    # Ensure address is checksummed
+    wallet_address = w3.to_checksum_address(wallet_address)
     try:
         return User.find_one({"wallet_address": wallet_address})
     except Exception:
