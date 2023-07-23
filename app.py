@@ -34,16 +34,19 @@ erc6551_account_instance = w3.eth.contract(
 
 BASE_TUMMIES_URIS = [
     "Qmb6xm57jyCZk2VxmU3izsrQ6aW9KCtuangPmvcQwQrADD/00",
-    "Qmb6xm57jyCZk2VxmU3izsrQ6aW9KCtuangPmvcQwQrADD/10"
+    "Qmb6xm57jyCZk2VxmU3izsrQ6aW9KCtuangPmvcQwQrADD/10",
 ]
+
 
 @app.get("/restaurants")
 async def get_restaurants() -> list[Restaurant]:
     return Restaurant.find()
 
+
 @app.get("/restaurants/{restaurant_id}")
 async def get_restaurant(restaurant_id: str) -> Restaurant:
     return Restaurant.get_by_doc_id(restaurant_id)
+
 
 @app.post("/reviews/new")
 async def post_review(
@@ -151,8 +154,11 @@ def mint_and_create_6551(user: User, metadata_uri: str) -> None:
     ).call()
     user.save()
     print("ERC-6551 account address saved")
-    
-def mint_proof_of_snack_and_transfer_to_6551(user: User, restaurant_id: str) -> None:
+
+
+def mint_proof_of_snack_and_transfer_to_6551_and_evolve(
+    user: User, restaurant_id: str
+) -> None:
     # We mint a ProofOfSnack NFT and transfer it to the Tummy ERC-6551
     nonce = w3.eth.get_transaction_count(os.environ["DEPLOYER_ADDRESS"])
     # Get the POAP URI from the restaurant
@@ -175,21 +181,54 @@ def mint_proof_of_snack_and_transfer_to_6551(user: User, restaurant_id: str) -> 
     tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
     _ = w3.eth.wait_for_transaction_receipt(tx_hash)
     print("ProofOfSnack NFT minted")
+    # We evolve the user's Tummy NFT, this is done by incrementing the IPFS URI by 1 and replacing it
+    # We want to get Qmb6xm57jyCZk2VxmU3izsrQ6aW9KCtuangPmvcQwQrADD/10.png from https://ipfs.io/ipfs/Qmb6xm57jyCZk2VxmU3izsrQ6aW9KCtuangPmvcQwQrADD/10.png
+    metadata_uri = user.profile_picture_url.split("ipfs.io/ipfs/")[1].split(".png")[0]
+    # Increment the last digit
+    last_digit = metadata_uri[-1]
+    new_last_digit = str(int(last_digit) + 1)
+    metadata_uri = metadata_uri[:-1] + new_last_digit
+    # Append .png
+    metadata_uri = "https://ipfs.io/ipfs/" + metadata_uri + ".png"
+    print(f"New metadata URI: {metadata_uri}")
+    nonce = w3.eth.get_transaction_count(os.environ["DEPLOYER_ADDRESS"])
+    tx = tummy_contract_instance.functions.updateMetadataURI(
+        user.tummy_token_id,
+        metadata_uri,
+    ).build_transaction(
+        {
+            "chainId": 5,
+            "gas": 1000000,
+            "maxFeePerGas": w3.to_wei("20", "gwei"),
+            "maxPriorityFeePerGas": w3.to_wei("10", "gwei"),
+            "nonce": nonce,
+        }
+    )
+    signed_tx = w3.eth.account.sign_transaction(tx, private_key=private_key)
+    tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
+    _ = w3.eth.wait_for_transaction_receipt(tx_hash)
+    print("Tummy NFT evolved")
+    user.profile_picture_url = metadata_uri
+    user.save()
+
 
 @app.post("/restaurants/{restaurant_id}/checkin")
-async def checkin(restaurant_id: str, wallet_address: str, background_tasks: BackgroundTasks) -> None:
+async def checkin(
+    restaurant_id: str, wallet_address: str, background_tasks: BackgroundTasks
+) -> None:
     # Ensure address is checksummed
     wallet_address = w3.to_checksum_address(wallet_address)
     user = User.find_one({"wallet_address": wallet_address})
     user.visited_restaurants.append(restaurant_id)
     user.save()
     background_tasks.add_task(
-        mint_proof_of_snack_and_transfer_to_6551,
+        mint_proof_of_snack_and_transfer_to_6551_and_evolve,
         user,
         restaurant_id,
     )
-    return 200
+    # We also need to evolve the user's Tummy NFT
 
+    return 200
 
 
 @app.get("/.well-known/apple-app-site-association")
