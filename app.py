@@ -188,11 +188,15 @@ def mint_proof_of_snack_and_transfer_to_6551(user: User, restaurant_id: str) -> 
     )
 
 @app.post("restaurants/{restaurant_id}/checkin")
-async def checkin(restaurant_id: str, wallet_address: str) -> None:
+async def checkin(restaurant_id: str, wallet_address: str, background_tasks: BackgroundTasks) -> None:
     user = User.find_one({"wallet_address": wallet_address})
     user.visited_restaurants.append(restaurant_id)
     user.save()
-
+    background_tasks.add_task(
+        mint_proof_of_snack_and_transfer_to_6551,
+        user,
+        restaurant_id,
+    )
 
 
 
