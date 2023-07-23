@@ -33,6 +33,7 @@ class Restaurant(Model):
     address: str
     geolocation: Geolocation
     reviews: list[Review] = []
+    poap_uri: Optional[str] = None
 
 
 class User(Model):
