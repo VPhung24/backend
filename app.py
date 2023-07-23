@@ -41,6 +41,9 @@ BASE_TUMMIES_URIS = [
 async def get_restaurants() -> list[Restaurant]:
     return Restaurant.find()
 
+@app.get("/restaurants/{restaurant_id}")
+async def get_restaurant(restaurant_id: str) -> Restaurant:
+    return Restaurant.get_by_doc_id(restaurant_id)
 
 @app.post("/reviews/new")
 async def post_review(
